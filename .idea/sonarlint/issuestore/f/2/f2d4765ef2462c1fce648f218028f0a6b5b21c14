@@ -1,0 +1,11 @@
+
+d
+java:S2094	"BRemove this empty class, write its code or make it an "interface".(¹Ø£ùÿÿÿÿ8›ÚšÄ™2
+R
+java:S1128"0Remove this unused import 'jakarta.persistence'.(Î«Ô§úÿÿÿÿ8¡ÚšÄ™2
+n
+java:S1128"LRemove this unused import 'org.springframework.data.annotation.CreatedDate'.(Éå¥°ÿÿÿÿÿ8¡ÚšÄ™2
+n
+java:S1128"QRemove this unused import 'org.springframework.data.annotation.LastModifiedDate'.(Æğ¼‰8¡ÚšÄ™2
+H
+java:S1128"+Remove this unused import 'java.util.Date'.(¸…¼ü8¢ÚšÄ™2

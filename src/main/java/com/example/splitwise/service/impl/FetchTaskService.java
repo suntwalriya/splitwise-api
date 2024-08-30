@@ -31,16 +31,17 @@ public class FetchTaskService {
     private IExpenseSplitDAO iExpenseSplitDAO;
 
     public FetchTaskResponse getFetchTaskDetails(Integer userId) {
+
         // Fetch user information
         User user = iUserDAO.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        // Fetch groups the user created or belongs to (assuming created_by_id ties user to groups)
+        // Fetch userGroups the user created or belongs to (created_by_id ties user to userGroups)
         List<UserGroups> groups = iUserGroupDAO.findByCreatedById(userId);
 
         // Extract group IDs from the UserGroups list
         List<Integer> groupIds = groups.stream()
-                .map(UserGroups::getId)  // Assuming `getId()` returns the group ID
+                .map(UserGroups::getId)
                 .collect(Collectors.toList());
 
         // Fetch expenses related to the user or the groups they belong to

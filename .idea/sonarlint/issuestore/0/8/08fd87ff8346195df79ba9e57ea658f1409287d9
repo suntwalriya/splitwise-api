@@ -1,16 +1,21 @@
 
 “
-java:S1192ó"ODefine a constant instead of duplicating this literal "User not found" 4 times.(š”™‰8Şœ£ó™2J$3940b428-9c29-43f3-b3ab-df71463a766a
+java:S1192ù"ODefine a constant instead of duplicating this literal "User not found" 4 times.(š”™‰8Şœ£ó™2J$31556d1f-cd17-4c5d-94f9-fbce4b457793
+”
+java:S3655†"PCall "Optional#isPresent()" or "!Optional#isEmpty()" before accessing the value.(Ğ§­Ê8„Ëšš2J$d132b3dd-2e68-40d5-a291-88caed94639e
+™
+java:S3655‡"PCall "Optional#isPresent()" or "!Optional#isEmpty()" before accessing the value.(ú ¯¤ÿÿÿÿÿ8„Ëšš2J$9d1a356a-3e73-4314-9daa-187f1168e9bc
 …
-java:S6813!"BRemove this field injection and use constructor injection instead.(êæÄŞ8Œ£ó™2J$009cb33d-8cad-4782-89f9-76121b7f8457
+java:S6813"BRemove this field injection and use constructor injection instead.(êæÄŞ8Œ£ó™2J$f09bb047-cf78-41f4-8390-ca2216066f5f
 …
-java:S6813$"BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$bdcb8617-953d-4a2b-ad44-cf1e12c47ef5
+java:S6813""BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$25aa6d38-633a-4b08-a6cb-17b997c878be
 …
-java:S6813'"BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$2f62c50c-fe35-4b9e-b23b-12fa87c7970b
+java:S6813%"BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$f8912f15-1e53-46c2-9c21-77e8c73f610a
 …
-java:S6813*"BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$e7cd2b6e-2397-4c6e-8d6b-3a94752a6485
+java:S6813("BRemove this field injection and use constructor injection instead.(êæÄŞ8£ó™2J$64d0a241-cd52-4872-ad01-4426c353ee99
+…
+java:S6813+"BRemove this field injection and use constructor injection instead.(êæÄŞ8…Ëšš2J$3d3012d6-ee04-4074-91dc-9aff2f61a21c
 •
-java:S3776U"RRefactor this method to reduce its Cognitive Complexity from 19 to the 15 allowed.(ˆôª÷8 £ó™2J$553f72ba-2a39-448d-960a-890685821bfb
-„	java:S125›"<This block of commented-out lines of code should be removed.(Ø˜îıÿÿÿÿ8¶£ó™2J$850745ba-8ac0-42f1-86e4-abfa135ce69d
+java:S3776W"RRefactor this method to reduce its Cognitive Complexity from 17 to the 15 allowed.(ˆôª÷8 £ó™2J$d82d6f29-a1e1-4854-8fa2-9fb394aa0ff4
 r
-java:S2201´"/The return value of "orElseThrow" must be used.(„š¿$8¸£ó™2J$b14e1b60-b842-4ad8-bb99-35696641ccc0
+java:S2201¹"/The return value of "orElseThrow" must be used.(„š¿$8¸£ó™2J$01b9a915-ac6f-46a8-b15f-9afbebcf26c5

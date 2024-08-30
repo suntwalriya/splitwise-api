@@ -4,7 +4,6 @@ import com.example.splitwise.entities.request.AddExpenseRequest;
 import com.example.splitwise.entities.request.SettleExpenseRequest;
 import com.example.splitwise.entities.response.AddExpenseResponse;
 import com.example.splitwise.entities.response.SettleExpenseResponse;
-import com.example.splitwise.repository.table.Expense;
 import com.example.splitwise.service.impl.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

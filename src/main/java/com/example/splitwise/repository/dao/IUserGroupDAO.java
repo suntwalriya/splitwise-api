@@ -6,6 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface IUserGroupDAO extends JpaRepository<UserGroups, Integer> {
-
     List<UserGroups> findByCreatedById(Integer userId);
 }

@@ -23,6 +23,7 @@ public class LoginService implements ILoginService {
     public String loginUser(LoginRequest loginRequest) {
         Optional<User> userOptional = iUserDAO.findByUsername(loginRequest.getUsername());
 
+        // Fetch the user who is creating the group
         if (!userOptional.isPresent()) {
             throw new UserNotFoundException("User not found");
         }
@@ -35,6 +36,7 @@ public class LoginService implements ILoginService {
             iUserDAO.save(user);
         }
 
+        // Check if the login password and user password matches
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new InvalidPasswordException("Invalid password");
         }

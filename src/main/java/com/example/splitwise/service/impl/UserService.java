@@ -19,13 +19,17 @@ public class UserService implements IUserService {
     private BCryptPasswordEncoder passwordEncoder;
 
     public User registerUser(User user) {
+
+        // Fetch the user who is registering
         Optional<User> existingUserByUsername = iUserDAO.findByUsername(user.getUsername());
         Optional<User> existingUserByContactNumber = iUserDAO.findByContactNumber(user.getContactNumber());
 
+        // Check if the user already exists as a registered user
         if (existingUserByUsername.isPresent() || existingUserByContactNumber.isPresent()) {
             throw new UserAlreadyExistsException("User already exists, please login directly.");
         }
 
+        // set the user password in an encoded manner
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return iUserDAO.save(user);
     }

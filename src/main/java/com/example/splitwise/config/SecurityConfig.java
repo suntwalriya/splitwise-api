@@ -8,7 +8,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-
 public class SecurityConfig {
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -18,13 +17,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Disable CSRF protection
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/register", "/api/v1/login", "/api/groups/createGroup", "/api/expenses/addExpense", "/api/expenses/settle", "/api/fetch/details/**", "/api/healthCheck").permitAll() // Allow unauthenticated access to /register
-                        .anyRequest().authenticated() // Require authentication for other requests
+                        .requestMatchers("/api/v1/register", "/api/v1/login", "/api/groups/createGroup", "/api/expenses/addExpense", "/api/expenses/settle", "/api/fetch/details/**", "/api/healthCheck").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .addFilterBefore(new UsernamePasswordAuthenticationFilter(),
-                        UsernamePasswordAuthenticationFilter.class); // Add custom authentication filter
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

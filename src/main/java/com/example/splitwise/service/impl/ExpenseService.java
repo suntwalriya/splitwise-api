@@ -1,6 +1,7 @@
 package com.example.splitwise.service.impl;
 
 import com.example.splitwise.entities.dto.TransactionDTO;
+import com.example.splitwise.entities.enums.ExpenseSettled;
 import com.example.splitwise.entities.enums.SplitType;
 import com.example.splitwise.entities.request.AddExpenseRequest;
 import com.example.splitwise.entities.request.SettleExpenseRequest;
@@ -10,10 +11,7 @@ import com.example.splitwise.exception.DuplicateExpenseException;
 import com.example.splitwise.exception.GroupNotFoundException;
 import com.example.splitwise.exception.InvalidSplitException;
 import com.example.splitwise.exception.UserNotFoundException;
-import com.example.splitwise.repository.dao.IExpenseDAO;
-import com.example.splitwise.repository.dao.IExpenseSplitDAO;
-import com.example.splitwise.repository.dao.IGroupDAO;
-import com.example.splitwise.repository.dao.IUserDAO;
+import com.example.splitwise.repository.dao.*;
 import com.example.splitwise.repository.table.Expense;
 import com.example.splitwise.repository.table.ExpenseSplit;
 import com.example.splitwise.repository.table.User;
@@ -42,6 +40,9 @@ public class ExpenseService implements IExpenseService {
     @Autowired
     private IGroupDAO iGroupDAO;
 
+    @Autowired
+    private IUserGroupDAO iUserGroupDAO;
+
     @Transactional
     public AddExpenseResponse addExpense(AddExpenseRequest request) {
 
@@ -69,6 +70,7 @@ public class ExpenseService implements IExpenseService {
     }
 
     private Expense createExpense(AddExpenseRequest request) {
+
         Expense expense = new Expense();
         expense.setDescription(request.getDescription());
         expense.setAmount(request.getAmount());
@@ -83,6 +85,7 @@ public class ExpenseService implements IExpenseService {
 
     @Transactional
     public SettleExpenseResponse settleExpenses(SettleExpenseRequest request) {
+
         List<Expense> expenses;
 
         if (request.getGroupId() != null) {
@@ -148,13 +151,15 @@ public class ExpenseService implements IExpenseService {
             transactions.add(transactionDTO);
         }
 
-        // Mark expenses as settled if necessary
+        // Mark the group as SETTLED
         if (request.getGroupId() != null) {
-            for (Expense expense : expenses) {
-                // Mark the expense as settled (add a 'settled' field in Expense if necessary)
-                // expense.setSettled(true);
-                iExpenseDAO.save(expense);
-            }
+            // Fetch the UserGroup entity
+            UserGroups userGroup = iUserGroupDAO.findById(request.getGroupId())
+                    .orElseThrow(() -> new GroupNotFoundException("Group not found"));
+
+            // Mark the group as SETTLED
+            userGroup.setIsSettled(ExpenseSettled.SETTLED);
+            iUserGroupDAO.save(userGroup);
         }
 
         return new SettleExpenseResponse(transactions, true, "Expenses settled successfully.");
@@ -205,20 +210,20 @@ public class ExpenseService implements IExpenseService {
             );
         } catch (Exception e) {
             log.error("Error while checking for existing expense", e);
-            throw e;  // or handle the error as needed
+            throw e;
         }
 
         if (!existingExpenses.isEmpty()) {
             throw new DuplicateExpenseException("An expense with the same details already exists.");
         }
 
-        // Pass validated entities as needed
         request.setValidatedPayer(paidBy);
         request.setValidatedCreator(createdBy);
         request.setValidatedGroup(group);
     }
 
     private void handleSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, SplitType splitType, double totalAmount) {
+
         switch (splitType) {
             case EXACT:
                 handleExactSplits(splits, expense);
@@ -238,6 +243,7 @@ public class ExpenseService implements IExpenseService {
     }
 
     private void handleExactSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense) {
+
         for (AddExpenseRequest.SplitDetail splitDetail : splits) {
             User user = iUserDAO.findById(splitDetail.getUserId())
                     .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -245,13 +251,14 @@ public class ExpenseService implements IExpenseService {
             ExpenseSplit expenseSplit = new ExpenseSplit();
             expenseSplit.setExpenseId(expense.getId());
             expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(splitDetail.getValue());  // Exact amount
+            expenseSplit.setSplitValue(splitDetail.getValue());  // exact amount
 
             iExpenseSplitDAO.save(expenseSplit);
         }
     }
 
     private void handleEqualSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
+
         double equalShare = totalAmount / splits.size();
         for (AddExpenseRequest.SplitDetail splitDetail : splits) {
             User user = iUserDAO.findById(splitDetail.getUserId())
@@ -260,13 +267,14 @@ public class ExpenseService implements IExpenseService {
             ExpenseSplit expenseSplit = new ExpenseSplit();
             expenseSplit.setExpenseId(expense.getId());
             expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(equalShare);  // Equal share
+            expenseSplit.setSplitValue(equalShare);  // equal share
 
             iExpenseSplitDAO.save(expenseSplit);
         }
     }
 
     private void handlePercentSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
+
         for (AddExpenseRequest.SplitDetail splitDetail : splits) {
             User user = iUserDAO.findById(splitDetail.getUserId())
                     .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -276,13 +284,14 @@ public class ExpenseService implements IExpenseService {
             ExpenseSplit expenseSplit = new ExpenseSplit();
             expenseSplit.setExpenseId(expense.getId());
             expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(percentageShare);  // Calculated from percentage
+            expenseSplit.setSplitValue(percentageShare);  // percentage share
 
             iExpenseSplitDAO.save(expenseSplit);
         }
     }
 
     private void handleRatioSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
+
         double totalRatio = splits.stream().mapToDouble(AddExpenseRequest.SplitDetail::getValue).sum();
         for (AddExpenseRequest.SplitDetail splitDetail : splits) {
             User user = iUserDAO.findById(splitDetail.getUserId())
@@ -293,7 +302,7 @@ public class ExpenseService implements IExpenseService {
             ExpenseSplit expenseSplit = new ExpenseSplit();
             expenseSplit.setExpenseId(expense.getId());
             expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(ratioShare);  // Calculated from ratio
+            expenseSplit.setSplitValue(ratioShare);  // ratio share
 
             iExpenseSplitDAO.save(expenseSplit);
         }

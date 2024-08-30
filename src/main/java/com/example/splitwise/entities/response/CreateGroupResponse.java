@@ -1,7 +1,5 @@
 package com.example.splitwise.entities.response;
 
-import com.example.splitwise.entities.enums.Currency;
-import com.example.splitwise.repository.table.User;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

@@ -143,3 +143,5 @@ Lsrc/main/java/com/example/splitwise/exception/ResourceNotFoundException.java,e
 Lsrc/main/java/com/example/splitwise/repository/dao/IUserGroupMappingDAO.java,f/7/f775bf87adf68049ee31582c056363e89262604b
 8
 Procfile,b/c/bc3c68e880d1a01632bce79f69dd1387c7ba9c54
+A
+system.properties,a/5/a5db35984da8ffa0e255c16a2e31ae7b26e7d222

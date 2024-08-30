@@ -145,3 +145,5 @@ Lsrc/main/java/com/example/splitwise/repository/dao/IUserGroupMappingDAO.java,f
 Procfile,b/c/bc3c68e880d1a01632bce79f69dd1387c7ba9c54
 A
 system.properties,a/5/a5db35984da8ffa0e255c16a2e31ae7b26e7d222
+y
+Isrc/main/java/com/example/splitwise/controller/HealthCheckController.java,f/d/fd39cb157476c03909e4362d553e9893bf2b68f9

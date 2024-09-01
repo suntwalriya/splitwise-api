@@ -82,6 +82,8 @@ public class ExpenseService implements IExpenseService {
         // Step 7: Calculate the overall balance
         double overallBalance = calculateOverallBalance(request.getPaidBy());
 
+        friendBalances.remove(request.getPaidBy());
+
         // Step 8: Return the response
         CreateExpenseResponse response = new CreateExpenseResponse();
         response.setMessage("Expense created successfully");
@@ -137,8 +139,11 @@ public class ExpenseService implements IExpenseService {
     private void updateBalance(int userId, int friendId, double amount, Map<Integer, Double> friendBalances) {
         UserBalance balance = iUserBalanceDAO.findByUserIdAndFriendId(userId, friendId)
                 .orElseGet(() -> new UserBalance(userId, friendId, 0.0));
+
         balance.setBalance(balance.getBalance() + amount);
         iUserBalanceDAO.save(balance);
+
+        // Update the friendBalances map with the current balance
         friendBalances.put(friendId, balance.getBalance());
     }
 

@@ -127,7 +127,7 @@ https://shimmering-forsythia-d94.notion.site/Splitwise-API-917b143a391d4d28a9ea4
 
 ### System Health Check
 
-* **Register**: `GET /api/healthCheck`
+* **Register**: `GET /api/v1/healthCheck`
 
 ### User Management
 
@@ -136,15 +136,15 @@ https://shimmering-forsythia-d94.notion.site/Splitwise-API-917b143a391d4d28a9ea4
 
 ### Group Management
 
-* **Create Group**: `POST /api/groups/createGroup`
+* **Create Group**: `POST /api/v1/groups`
 
 ### Expense Management - Create and Settle Expense
 
-* **Create Expense**: `POST /api/expenses/create`
+* **Create Expense**: `POST /api/v1/expenses`
 
 ### Fetch Balance API
 
-* **Fetch Balance**: `GET /api/fetch/details/{userId}`
+* **Fetch Balance**: `GET /api/v1/fetch/details/{userId}`
 
 
 ## 🌍 Deployment

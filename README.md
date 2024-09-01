@@ -25,6 +25,7 @@ Welcome to the Splitwise-API, a backend service designed for managing group and 
 ## 🛠️ Technologies
 
 - **Java Spring Boot**: Backend framework
+- **Java Spring Boot**: Backend framework
 - **MySQL**: Relational database
 - **Hibernate**: ORM for database interactions
 - **JWT**: Authentication and authorization
@@ -121,6 +122,8 @@ splitwise-api/
     ```
 
 ## 📖 API Documentation
+
+https://shimmering-forsythia-d94.notion.site/Splitwise-API-917b143a391d4d28a9ea4ccaf4caf43a?pvs=4
 
 ### System Health Check
 

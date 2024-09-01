@@ -17,6 +17,8 @@ public class LoginController {
     @Autowired
     private LoginService loginService;
 
+    // TODO: Move login functionality to a separate authentication service like Keycloak or OAuth.
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {

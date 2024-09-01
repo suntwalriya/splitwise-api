@@ -8,6 +8,7 @@ import com.example.splitwise.repository.table.User;
 import com.example.splitwise.service.ILoginService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class LoginService implements ILoginService {
     @Autowired
     private IUserDAO iUserDAO;
@@ -30,7 +32,8 @@ public class LoginService implements ILoginService {
 
         // Step 1. Fetch the user who is creating the group
         if (!userOptional.isPresent()) {
-            throw new UserNotFoundException("User not found");
+            log.debug("User not found for userId: {}", userOptional.get().getId());
+            throw new UserNotFoundException("Invalid credentials");
         }
 
         User user = userOptional.get();
@@ -43,7 +46,8 @@ public class LoginService implements ILoginService {
 
         // Step 3. Check if the login password and user password matches
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
-            throw new InvalidPasswordException("Invalid password");
+            log.debug("Invalid password: {}", loginRequest.getPassword());
+            throw new InvalidPasswordException("Invalid credentials");
         }
 
         // Step 4. Compute a JWT auth token for a userName and 10 hours expiration (To be used in other methods)

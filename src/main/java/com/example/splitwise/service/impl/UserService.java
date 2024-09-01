@@ -4,6 +4,7 @@ import com.example.splitwise.exception.UserAlreadyExistsException;
 import com.example.splitwise.repository.dao.IUserDAO;
 import com.example.splitwise.repository.table.User;
 import com.example.splitwise.service.IUserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class UserService implements IUserService {
     @Autowired
     private IUserDAO iUserDAO;
@@ -26,7 +28,8 @@ public class UserService implements IUserService {
 
         // Step 2. Check if the user already exists as a registered user
         if (existingUserByUsername.isPresent() || existingUserByContactNumber.isPresent()) {
-            throw new UserAlreadyExistsException("User already exists, please login directly.");
+            log.debug("User already exists, please login directly.");
+            throw new UserAlreadyExistsException("Invalid Credentials");
         }
 
         // Step 3. set the user password in an encoded manner

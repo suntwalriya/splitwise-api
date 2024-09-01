@@ -142,9 +142,9 @@ https://shimmering-forsythia-d94.notion.site/Splitwise-API-917b143a391d4d28a9ea4
 
 * **Create Expense**: `POST /api/expenses/create`
 
-### Fetch Task API
+### Fetch Balance API
 
-* **Fetch Task**: `GET /api/fetch/details/{userId}`
+* **Fetch Balance**: `GET /api/fetch/details/{userId}`
 
 
 ## 🌍 Deployment

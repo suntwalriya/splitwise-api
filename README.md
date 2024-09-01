@@ -127,7 +127,7 @@ https://shimmering-forsythia-d94.notion.site/Splitwise-API-917b143a391d4d28a9ea4
 
 ### System Health Check
 
-* **Register**: `GET /api/v1/healthCheck`
+* **Health Check**: `GET /api/v1/healthCheck`
 
 ### User Management
 

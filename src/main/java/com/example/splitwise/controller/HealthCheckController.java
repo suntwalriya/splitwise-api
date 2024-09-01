@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class HealthCheckController {
-    @GetMapping("/api/healthCheck")
+    @GetMapping("/api/v1/healthCheck")
     public String healthCheck() {
         return "Welcome to splitwise-api!";
     }

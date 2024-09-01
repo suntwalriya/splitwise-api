@@ -2,6 +2,7 @@ package com.example.splitwise.service.impl;
 
 import com.example.splitwise.entities.request.CreateGroupRequest;
 import com.example.splitwise.entities.response.CreateGroupResponse;
+import com.example.splitwise.exception.GroupAlreadyExistsException;
 import com.example.splitwise.exception.UserNotFoundException;
 import com.example.splitwise.repository.dao.IUserDAO;
 import com.example.splitwise.repository.dao.IUserGroupDAO;
@@ -32,17 +33,8 @@ public class GroupService implements IGroupService{
     // To create a group
     public CreateGroupResponse createGroup(CreateGroupRequest request) {
 
-        // Step 1: Check if a group with the same name already exists
-        if (groupExists(request.getName(), request.getCreatedById())) {
-            return new CreateGroupResponse("Group with the same name already exists", 0);
-        }
-
-        // Validate that all users exist
-        for (int userId : request.getUserIds()) {
-            if (!iUserDAO.existsById(userId)) {
-                throw new UserNotFoundException("User with ID " + userId + " not found.");
-            }
-        }
+        // Step 1: Perform validation and preprocessing
+        validateAndPreprocessCreateGroupRequest(request);
 
         // Step 2: Create the group
         UserGroups group = createGroupEntity(request);
@@ -51,7 +43,23 @@ public class GroupService implements IGroupService{
         createUserGroupMappings(group.getId(), request.getUserIds());
 
         // Step 4: Return the response
-        return buildCreateGroupResponse(group.getId());
+        return buildCreateGroupResponse(group);
+    }
+
+    // Consolidated validation and preprocessing function
+    private void validateAndPreprocessCreateGroupRequest(CreateGroupRequest request) {
+
+        // Check if a group with the same name already exists
+        if (groupExists(request.getName(), request.getCreatedById())) {
+            throw new GroupAlreadyExistsException("Group with the same name already exists");
+        }
+
+        // Validate that all users exist
+        for (int userId : request.getUserIds()) {
+            if (!iUserDAO.existsById(userId)) {
+                throw new UserNotFoundException("User with ID " + userId + " not found.");
+            }
+        }
     }
 
     // To validate if a group exists for a groupName and createdBy
@@ -81,10 +89,13 @@ public class GroupService implements IGroupService{
         }
     }
 
-    private CreateGroupResponse buildCreateGroupResponse(int groupId) {
+    private CreateGroupResponse buildCreateGroupResponse(UserGroups group) {
+        List<UserGroupMapping> userMappings = iUserGroupMappingDAO.findByGroupId(group.getId());
+
         CreateGroupResponse response = new CreateGroupResponse();
-        response.setMessage("Group created successfully");
-        response.setGroupId(groupId);
+        response.setGroup(group);
+        response.setUserMappings(userMappings);
+
         return response;
     }
 }

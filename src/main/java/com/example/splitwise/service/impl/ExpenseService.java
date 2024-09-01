@@ -2,7 +2,7 @@ package com.example.splitwise.service.impl;
 
 import com.example.splitwise.entities.request.CreateExpenseRequest;
 import com.example.splitwise.entities.response.CreateExpenseResponse;
-import com.example.splitwise.exception.GroupAlreadyExistsException;
+import com.example.splitwise.exception.GroupDoesNotExistException;
 import com.example.splitwise.repository.dao.*;
 import com.example.splitwise.repository.table.*;
 import com.example.splitwise.service.IExpenseService;
@@ -37,7 +37,7 @@ public class ExpenseService implements IExpenseService {
         if (request.getGroupId() != null) {
             boolean groupExists = iGroupDAO.existsById(request.getGroupId());
             if (!groupExists) {
-                throw new GroupAlreadyExistsException("Group with ID " + request.getGroupId() + " does not exist.");
+                throw new GroupDoesNotExistException("Group with ID " + request.getGroupId() + " does not exist.");
             }
         }
 
@@ -50,10 +50,7 @@ public class ExpenseService implements IExpenseService {
         }
 
         // Step 2: Validate Expense Creation Request
-        CreateExpenseResponse validationResponse = validateExpenseCreationRequest(request);
-        if (validationResponse != null) {
-            return validationResponse; // Return the validation error response if any
-        }
+        validateExpenseCreationRequest(request);
 
         // Step 3: Create and save the expense
         Expense expense = new Expense();
@@ -149,57 +146,46 @@ public class ExpenseService implements IExpenseService {
         return iUserBalanceDAO.calculateOverallBalance(userId).orElse(0.0);
     }
 
-    private CreateExpenseResponse validateExpenseCreationRequest(CreateExpenseRequest request) {
+    private void validateExpenseCreationRequest(CreateExpenseRequest request) {
+        // Validate group existence if groupId is provided
+        if (request.getGroupId() != null && !iGroupDAO.existsById(request.getGroupId())) {
+            throw new GroupDoesNotExistException("Group with ID " + request.getGroupId() + " does not exist.");
+        }
+
         // Validate that description is not null or empty
         if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
-            return new CreateExpenseResponse("Description cannot be null or empty",
-                    0.0,
-                    null);
+            throw new IllegalArgumentException("Description cannot be null or empty");
         }
 
         // Validate that amount is greater than 0
         if (request.getAmount() <= 0) {
-            return new CreateExpenseResponse("Amount must be greater than zero",
-                    0.0,
-                    null);
+            throw new IllegalArgumentException("Amount must be greater than zero");
         }
 
         // Validate that paidBy is set
         if (request.getPaidBy() <= 0) {
-            return new CreateExpenseResponse("PaidBy must be a valid user ID",
-                    0.0,
-                    null);
+            throw new IllegalArgumentException("PaidBy must be a valid user ID");
         }
 
         // Validate that createdBy is set
         if (request.getCreatedBy() <= 0) {
-            return new CreateExpenseResponse( "CreatedBy must be a valid user ID",
-                    0.0,
-                    null);
+            throw new IllegalArgumentException("CreatedBy must be a valid user ID");
         }
 
         // Validate that participants are not null or empty
         if (request.getParticipants() == null || request.getParticipants().isEmpty()) {
-            return new CreateExpenseResponse( "Participants cannot be null or empty",
-                    0.0,
-                    null);
+            throw new IllegalArgumentException("Participants cannot be null or empty");
         }
 
         // Validate that each participant has a valid userId and amount
         for (CreateExpenseRequest.Participant participant : request.getParticipants()) {
             if (participant.getUserId() <= 0) {
-                return new CreateExpenseResponse("Participant must have a valid user ID",
-                        0.0,
-                        null);
+                throw new IllegalArgumentException("Participant must have a valid user ID");
             }
             if (participant.getAmount() < 0) {
-                return new CreateExpenseResponse("Participant amount cannot be negative",
-                        0.0,
-                        null);
+                throw new IllegalArgumentException("Participant amount cannot be negative");
             }
         }
-
-        return null; // return null if there are no validation failures
     }
 
 }

@@ -20,6 +20,8 @@ public class UserService implements IUserService {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    // TODO: Move register and login functionality to a separate auth service like Keycloak or OAuth.
+
     public User registerUser(User user) {
 
         // Step 1. Fetch the user who is registering
@@ -29,10 +31,10 @@ public class UserService implements IUserService {
         // Step 2. Check if the user already exists as a registered user
         if (existingUserByUsername.isPresent() || existingUserByContactNumber.isPresent()) {
             log.debug("User already exists, please login directly.");
-            throw new UserAlreadyExistsException("Invalid Credentials");
+            throw new UserAlreadyExistsException("Invalid credentials");
         }
 
-        // Step 3. set the user password in an encoded manner
+        // Step 3. Set the user password in an encoded manner
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return iUserDAO.save(user);
     }

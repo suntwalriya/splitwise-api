@@ -64,7 +64,7 @@ public class FetchBalanceService {
                 .sum();
     }
 
-    // To calculate group expenses
+    // To calculate friend expenses
     private Map<Integer, Double> calculateFriendBalances(int userId) {
         List<UserBalance> balances = iUserBalanceDAO.findByUserId(userId);
         Map<Integer, Double> friendBalances = new HashMap<>();

@@ -10,6 +10,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,16 @@ public class LoginService implements ILoginService {
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    //TODO:: use the access token and secret key for signing for auth filter
+
+    @Value("${jwt.access.token.expiry}")
+    private long accessTokenExpiry;
+
+    @Value("${jwt.secret.key}")
+    private String secretKey;
+
+    // TODO: Move register and login functionality to a separate auth service like Keycloak or OAuth.
 
     public Map<String, Object> loginUser(LoginRequest loginRequest) {
         Optional<User> userOptional = iUserDAO.findByUsername(loginRequest.getUsername());
@@ -50,32 +61,19 @@ public class LoginService implements ILoginService {
             throw new InvalidPasswordException("Invalid credentials");
         }
 
-        // Step 4. Compute a JWT auth token for a userName and 10 hours expiration (To be used in other methods)
+        // Step 4. Compute a JWT auth token for a userName and configurable expiration
         String token = Jwts.builder()
-                    .setSubject(user.getUsername())
-                    .setIssuedAt(new Date())
-                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours expiration
-                    .signWith(SignatureAlgorithm.HS256, "myVeryStrongSecretKeyThatIsLongAndRandom")
-                    .compact();
-
-        // Step 5. Generate Refresh Token (with a longer expiration time)
-        String refreshToken = Jwts.builder()
                 .setSubject(user.getUsername())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 30)) // 30 days expiration
-                .signWith(SignatureAlgorithm.HS256, "myVeryStrongSecretKeyThatIsLongAndRandom")
+                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiry)) //10 hours expiry in ms
+                .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
 
-        // Step 6. Prepare the response map
+        // TODO:: Generate Refresh Token (with a longer expiration time)
+
+        // Step 5. Prepare the response map
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Logged in successfully");
-        Map<String, Object> userDetails = new HashMap<>();
-        userDetails.put("id", user.getId());
-        userDetails.put("name", user.getName());
-        userDetails.put("contactNumber", user.getContactNumber());
-        response.put("user", userDetails);
-        response.put("tokenId", token);
-        response.put("refreshToken", refreshToken);
+        response.put("accessToken", token);
 
         return response;
     }

@@ -7,6 +7,7 @@ import lombok.Data;
 @Table(name = "expense_splits")
 @Data
 public class ExpenseSplit {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
@@ -17,6 +18,6 @@ public class ExpenseSplit {
     @Column(name = "user_id", nullable = false)
     private int userId;
 
-    @Column(name = "split_value", nullable = false)
-    private Double splitValue; // This field replaces amount, percent, and ratio
+    @Column(name = "amount", nullable = false)
+    private double amount;
 }

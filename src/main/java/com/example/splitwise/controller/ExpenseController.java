@@ -1,9 +1,7 @@
 package com.example.splitwise.controller;
 
-import com.example.splitwise.entities.request.AddExpenseRequest;
-import com.example.splitwise.entities.request.SettleExpenseRequest;
-import com.example.splitwise.entities.response.AddExpenseResponse;
-import com.example.splitwise.entities.response.SettleExpenseResponse;
+import com.example.splitwise.entities.request.CreateExpenseRequest;
+import com.example.splitwise.entities.response.CreateExpenseResponse;
 import com.example.splitwise.service.impl.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,15 +17,9 @@ public class ExpenseController {
     @Autowired
     private ExpenseService expenseService;
 
-    @PostMapping(value = "/addExpense")
-    public ResponseEntity<AddExpenseResponse> addExpense(@RequestBody AddExpenseRequest request) {
-        AddExpenseResponse expense = expenseService.addExpense(request);
-        return ResponseEntity.ok(expense);
-    }
-
-    @PostMapping("/settle")
-    public ResponseEntity<SettleExpenseResponse> settleExpense(@RequestBody SettleExpenseRequest request) {
-        SettleExpenseResponse response = expenseService.settleExpenses(request);
+    @PostMapping("/create")
+    public ResponseEntity<CreateExpenseResponse> createExpense(@RequestBody CreateExpenseRequest request) {
+        CreateExpenseResponse response = expenseService.createExpense(request);
         return ResponseEntity.ok(response);
     }
 }

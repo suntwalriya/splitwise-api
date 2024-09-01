@@ -28,27 +28,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleUserAlreadyExistsException(UserAlreadyExistsException ex) {
-        // Log to confirm this handler is invoked
-        System.out.println("Handling UserAlreadyExistsException");
         ErrorResponse errorResponse = new ErrorResponse("USER_ALREADY_EXISTS", ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
-    }
-
-    @ExceptionHandler(GroupNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleGroupNotFoundException(GroupNotFoundException ex) {
-        ErrorResponse errorResponse = new ErrorResponse("GROUP_NOT_FOUND", ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
-    }
-
-    @ExceptionHandler(InvalidSplitException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidSplitException(InvalidSplitException ex) {
-        ErrorResponse errorResponse = new ErrorResponse("INVALID_SPLIT", ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(DuplicateExpenseException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateExpenseException(DuplicateExpenseException ex) {
-        ErrorResponse errorResponse = new ErrorResponse("DUPLICATE_EXPENSE", ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 

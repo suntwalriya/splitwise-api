@@ -19,7 +19,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/register", "/api/v1/login", "/api/groups/createGroup", "/api/expenses/addExpense", "/api/expenses/settle", "/api/fetch/details/**", "/api/healthCheck").permitAll()
+                        .requestMatchers("/api/v1/register", "/api/v1/login", "/api/groups/createGroup", "/api/expenses/create", "/api/expenses/settle", "/api/fetch/details/**", "/api/healthCheck").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new UsernamePasswordAuthenticationFilter(),

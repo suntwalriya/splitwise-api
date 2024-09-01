@@ -1,26 +1,14 @@
 package com.example.splitwise.service.impl;
 
-import com.example.splitwise.entities.dto.TransactionDTO;
-import com.example.splitwise.entities.enums.ExpenseSettled;
-import com.example.splitwise.entities.enums.SplitType;
-import com.example.splitwise.entities.request.AddExpenseRequest;
-import com.example.splitwise.entities.request.SettleExpenseRequest;
-import com.example.splitwise.entities.response.AddExpenseResponse;
-import com.example.splitwise.entities.response.SettleExpenseResponse;
-import com.example.splitwise.exception.DuplicateExpenseException;
-import com.example.splitwise.exception.GroupNotFoundException;
-import com.example.splitwise.exception.InvalidSplitException;
-import com.example.splitwise.exception.UserNotFoundException;
+import com.example.splitwise.entities.request.CreateExpenseRequest;
+import com.example.splitwise.entities.response.CreateExpenseResponse;
+import com.example.splitwise.exception.GroupAlreadyExistsException;
 import com.example.splitwise.repository.dao.*;
-import com.example.splitwise.repository.table.Expense;
-import com.example.splitwise.repository.table.ExpenseSplit;
-import com.example.splitwise.repository.table.User;
-import com.example.splitwise.repository.table.UserGroups;
+import com.example.splitwise.repository.table.*;
 import com.example.splitwise.service.IExpenseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -35,276 +23,183 @@ public class ExpenseService implements IExpenseService {
     private IExpenseSplitDAO iExpenseSplitDAO;
 
     @Autowired
-    private IUserDAO iUserDAO;
-
-    @Autowired
     private IGroupDAO iGroupDAO;
 
     @Autowired
-    private IUserGroupDAO iUserGroupDAO;
+    private IUserBalanceDAO iUserBalanceDAO;
 
-    @Transactional
-    public AddExpenseResponse addExpense(AddExpenseRequest request) {
+    @Autowired
+    private IUserGroupBalanceDAO iUserGroupBalanceDAO;
 
-        // Validate the request
-        validateExpenseCreationRequest(request);
+    public CreateExpenseResponse createExpense(CreateExpenseRequest request) {
 
-        // Create the expense
-        Expense expense = createExpense(request);
+        // Step 0: Validate the existence of the group if groupId is provided
+        if (request.getGroupId() != null) {
+            boolean groupExists = iGroupDAO.existsById(request.getGroupId());
+            if (!groupExists) {
+                throw new GroupAlreadyExistsException("Group with ID " + request.getGroupId() + " does not exist.");
+            }
+        }
 
-        // Handle splits
-        handleSplits(request.getSplits(), expense, request.getSplitType(), request.getAmount());
+        // Step 1: Validate the existence of the group if groupId is provided
+        if (request.getGroupId() != null) {
+            boolean groupExists = iGroupDAO.existsById(request.getGroupId());
+            if (!groupExists) {
+                return new CreateExpenseResponse("Group with ID " + request.getGroupId() + " does not exist.", 0.0, Collections.emptyMap());
+            }
+        }
 
-        // Mapping major details to the response DTO
-        AddExpenseResponse response = new AddExpenseResponse();
-        response.setExpenseId(expense.getId());
-        response.setDescription(expense.getDescription());
-        response.setAmount(expense.getAmount());
-        response.setCurrency(expense.getCurrency().toString());
-        response.setSplitType(expense.getSplitType().toString());
-        response.setPaidBy(request.getValidatedPayer().getName());
-        response.setCreatedBy(request.getValidatedCreator().getName());
-        response.setCreatedAt(expense.getCreatedAt());
+        // Step 2: Validate Expense Creation Request
+        CreateExpenseResponse validationResponse = validateExpenseCreationRequest(request);
+        if (validationResponse != null) {
+            return validationResponse; // Return the validation error response if any
+        }
 
-        return response;
-    }
-
-    private Expense createExpense(AddExpenseRequest request) {
-
+        // Step 3: Create and save the expense
         Expense expense = new Expense();
         expense.setDescription(request.getDescription());
         expense.setAmount(request.getAmount());
-        expense.setCurrency(request.getCurrency());
         expense.setPaidBy(request.getPaidBy());
-        expense.setCreatedBy(request.getCreatedById());
-        expense.setSplitType(request.getSplitType());
+        expense.setCreatedBy(request.getCreatedBy());
         expense.setGroupId(request.getGroupId());
+        expense = iExpenseDAO.save(expense);
 
-        return iExpenseDAO.save(expense);
-    }
+        // Step 4: Create and save the expense splits
+        Map<Integer, Double> friendBalances = new HashMap<>();
+        for (CreateExpenseRequest.Participant participant : request.getParticipants()) {
+            ExpenseSplit split = new ExpenseSplit();
+            split.setExpenseId(expense.getId());
+            split.setUserId(participant.getUserId());
+            split.setAmount(participant.getAmount());
+            iExpenseSplitDAO.save(split);
 
-    @Transactional
-    public SettleExpenseResponse settleExpenses(SettleExpenseRequest request) {
+            // Step 5: Update the balances between the payer and each participant in user balances table
+            updateUserBalance(request.getPaidBy(), participant.getUserId(), participant.getAmount(), friendBalances);
+        }
 
-        List<Expense> expenses;
-
+        // Step 6: Update the user group balances if this is a group expense
         if (request.getGroupId() != null) {
-            // Fetch expenses for the group
-            expenses = iExpenseDAO.findByGroupId(request.getGroupId());
-        } else if (request.getUserId() != null && request.getFriendId() != null) {
-            // Fetch expenses between two users
-            expenses = iExpenseDAO.findByUserAndFriend(request.getUserId(), request.getFriendId());
-        } else {
-            throw new InvalidSplitException("Either groupId or both userId and friendId must be provided.");
+            updateUserGroupBalancesForExpense(request, request.getGroupId());
         }
 
-        List<TransactionDTO> transactions = new ArrayList<>();
-        Map<Integer, Double> individualAmounts = new HashMap<>();
+        // Step 7: Calculate the overall balance
+        double overallBalance = calculateOverallBalance(request.getPaidBy());
 
-        for (Expense expense : expenses) {
-            for (ExpenseSplit split : expense.getExpenseSplits()) {
-                int userId = split.getUserId();
-                double amount = split.getSplitValue() - expense.getAmount() / expense.getExpenseSplits().size();
+        // Step 8: Return the response
+        CreateExpenseResponse response = new CreateExpenseResponse();
+        response.setMessage("Expense created successfully");
+        response.setOverallBalance(overallBalance);
+        response.setFriendBalances(friendBalances);
+        return response;
+    }
 
-                individualAmounts.put(userId, individualAmounts.getOrDefault(userId, 0.0) + amount);
+    private void updateUserGroupBalancesForExpense(CreateExpenseRequest request, Integer groupId) {
+
+        // Net contribution for the user who paid
+        double userShareForPayer = request.getParticipants().stream()
+                .filter(p -> p.getUserId() == request.getPaidBy())
+                .findFirst().get().getAmount();
+        double netContribution = request.getAmount() - userShareForPayer;
+        updateUserGroupBalance(groupId, request.getPaidBy(), netContribution);
+
+        // Update balances for each participant
+        for (CreateExpenseRequest.Participant participant : request.getParticipants()) {
+            if (participant.getUserId() != request.getPaidBy()) {
+                updateUserGroupBalance(groupId, participant.getUserId(), -participant.getAmount());
+            }
+        }
+    }
+
+    private void updateUserGroupBalance(Integer groupId, int userId, double amount) {
+
+        // Fetch the existing balance or create a new entry if it doesn't exist
+        UserGroupBalance balance = iUserGroupBalanceDAO.findByUserIdAndGroupId(userId, groupId)
+                .orElseGet(() -> {
+                    // Create a new UserGroupBalance if not found
+                    UserGroupBalance newBalance = new UserGroupBalance();
+                    newBalance.setUserId(userId);
+                    newBalance.setGroupId(groupId);
+                    newBalance.setBalance(0.0);
+                    return newBalance;
+                });
+
+        // Update the balance
+        balance.setBalance(balance.getBalance() + amount);
+
+        // Save the updated balance back to the database
+        iUserGroupBalanceDAO.save(balance);
+    }
+
+    private void updateUserBalance(int paidBy, int participant, double amount, Map<Integer, Double> friendBalances) {
+        if (paidBy != participant) {
+            updateBalance(paidBy, participant, amount, friendBalances);
+            updateBalance(participant, paidBy, -amount, friendBalances);
+        }
+    }
+
+    private void updateBalance(int userId, int friendId, double amount, Map<Integer, Double> friendBalances) {
+        UserBalance balance = iUserBalanceDAO.findByUserIdAndFriendId(userId, friendId)
+                .orElseGet(() -> new UserBalance(userId, friendId, 0.0));
+        balance.setBalance(balance.getBalance() + amount);
+        iUserBalanceDAO.save(balance);
+        friendBalances.put(friendId, balance.getBalance());
+    }
+
+    private double calculateOverallBalance(int userId) {
+        return iUserBalanceDAO.calculateOverallBalance(userId).orElse(0.0);
+    }
+
+    private CreateExpenseResponse validateExpenseCreationRequest(CreateExpenseRequest request) {
+        // Validate that description is not null or empty
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
+            return new CreateExpenseResponse("Description cannot be null or empty",
+                    0.0,
+                    null);
+        }
+
+        // Validate that amount is greater than 0
+        if (request.getAmount() <= 0) {
+            return new CreateExpenseResponse("Amount must be greater than zero",
+                    0.0,
+                    null);
+        }
+
+        // Validate that paidBy is set
+        if (request.getPaidBy() <= 0) {
+            return new CreateExpenseResponse("PaidBy must be a valid user ID",
+                    0.0,
+                    null);
+        }
+
+        // Validate that createdBy is set
+        if (request.getCreatedBy() <= 0) {
+            return new CreateExpenseResponse( "CreatedBy must be a valid user ID",
+                    0.0,
+                    null);
+        }
+
+        // Validate that participants are not null or empty
+        if (request.getParticipants() == null || request.getParticipants().isEmpty()) {
+            return new CreateExpenseResponse( "Participants cannot be null or empty",
+                    0.0,
+                    null);
+        }
+
+        // Validate that each participant has a valid userId and amount
+        for (CreateExpenseRequest.Participant participant : request.getParticipants()) {
+            if (participant.getUserId() <= 0) {
+                return new CreateExpenseResponse("Participant must have a valid user ID",
+                        0.0,
+                        null);
+            }
+            if (participant.getAmount() < 0) {
+                return new CreateExpenseResponse("Participant amount cannot be negative",
+                        0.0,
+                        null);
             }
         }
 
-        PriorityQueue<Map.Entry<Integer, Double>> maxHeap = new PriorityQueue<>(
-                (a, b) -> Double.compare(b.getValue(), a.getValue())
-        );
-
-        PriorityQueue<Map.Entry<Integer, Double>> minHeap = new PriorityQueue<>(
-                Comparator.comparingDouble(Map.Entry::getValue)
-        );
-
-        for (Map.Entry<Integer, Double> entry : individualAmounts.entrySet()) {
-            if (entry.getValue() < 0) {
-                minHeap.add(entry);
-            } else if (entry.getValue() > 0) {
-                maxHeap.add(entry);
-            }
-        }
-
-        while (!minHeap.isEmpty()) {
-            Map.Entry<Integer, Double> sender = minHeap.poll();
-            Map.Entry<Integer, Double> receiver = maxHeap.poll();
-            TransactionDTO transactionDTO = new TransactionDTO();
-
-            transactionDTO.setFromUserName(iUserDAO.findById(sender.getKey()).get().getName());
-            transactionDTO.setToUserName(iUserDAO.findById(receiver.getKey()).get().getName());
-
-            double settledAmount = Math.min(Math.abs(sender.getValue()), receiver.getValue());
-
-            sender.setValue(sender.getValue() + settledAmount);
-            receiver.setValue(receiver.getValue() - settledAmount);
-
-            if (sender.getValue() < 0) {
-                minHeap.add(sender);
-            }
-
-            if (receiver.getValue() > 0) {
-                maxHeap.add(receiver);
-            }
-
-            transactionDTO.setAmount(settledAmount);
-            transactions.add(transactionDTO);
-        }
-
-        // Mark the group as SETTLED
-        if (request.getGroupId() != null) {
-            // Fetch the UserGroup entity
-            UserGroups userGroup = iUserGroupDAO.findById(request.getGroupId())
-                    .orElseThrow(() -> new GroupNotFoundException("Group not found"));
-
-            // Mark the group as SETTLED
-            userGroup.setIsSettled(ExpenseSettled.SETTLED);
-            iUserGroupDAO.save(userGroup);
-        }
-
-        return new SettleExpenseResponse(transactions, true, "Expenses settled successfully.");
+        return null; // return null if there are no validation failures
     }
 
-    private void validateExpenseCreationRequest(AddExpenseRequest request) {
-
-        // Validate the payer
-        User paidBy = iUserDAO.findById(request.getPaidBy())
-                .orElseThrow(() -> new UserNotFoundException("Payer not found"));
-
-        // Validate the creator
-        User createdBy = iUserDAO.findById(request.getCreatedById())
-                .orElseThrow(() -> new UserNotFoundException("Creator not found"));
-
-        // Validate the group or friend
-        UserGroups group = null;
-        if (request.getGroupId() != null) {
-            group = iGroupDAO.findById(request.getGroupId())
-                    .orElseThrow(() -> new GroupNotFoundException("Group not found"));
-        } else if (request.getFriendId() != null) {
-            iUserDAO.findById(request.getFriendId())
-                    .orElseThrow(() -> new UserNotFoundException("Friend not found"));
-        } else {
-            throw new InvalidSplitException("Either groupId or friendId must be provided");
-        }
-
-        log.debug("Checking for existing expense with description: {}, amount: {}, currency: {}, splitType: {}, groupId: {}, paidBy: {}, createdBy: {}",
-                request.getDescription(),
-                request.getAmount(),
-                request.getCurrency(),
-                request.getSplitType(),
-                request.getGroupId(),
-                request.getPaidBy(),
-                request.getCreatedById());
-
-        List<Expense> existingExpenses = null;
-        // Check for duplicate expenses
-        try {
-            existingExpenses = iExpenseDAO.findByDescriptionAndAmountAndCurrencyAndSplitTypeAndGroupIdAndPaidByAndCreatedBy(
-                    request.getDescription(),
-                    request.getAmount(),
-                    request.getCurrency(),
-                    request.getSplitType(),
-                    request.getGroupId(),
-                    request.getPaidBy(),
-                    request.getCreatedById()
-            );
-        } catch (Exception e) {
-            log.error("Error while checking for existing expense", e);
-            throw e;
-        }
-
-        if (!existingExpenses.isEmpty()) {
-            throw new DuplicateExpenseException("An expense with the same details already exists.");
-        }
-
-        request.setValidatedPayer(paidBy);
-        request.setValidatedCreator(createdBy);
-        request.setValidatedGroup(group);
-    }
-
-    private void handleSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, SplitType splitType, double totalAmount) {
-
-        switch (splitType) {
-            case EXACT:
-                handleExactSplits(splits, expense);
-                break;
-            case EQUAL:
-                handleEqualSplits(splits, expense, totalAmount);
-                break;
-            case PERCENT:
-                handlePercentSplits(splits, expense, totalAmount);
-                break;
-            case RATIO:
-                handleRatioSplits(splits, expense, totalAmount);
-                break;
-            default:
-                throw new InvalidSplitException("Invalid split type");
-        }
-    }
-
-    private void handleExactSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense) {
-
-        for (AddExpenseRequest.SplitDetail splitDetail : splits) {
-            User user = iUserDAO.findById(splitDetail.getUserId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-            ExpenseSplit expenseSplit = new ExpenseSplit();
-            expenseSplit.setExpenseId(expense.getId());
-            expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(splitDetail.getValue());  // exact amount
-
-            iExpenseSplitDAO.save(expenseSplit);
-        }
-    }
-
-    private void handleEqualSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
-
-        double equalShare = totalAmount / splits.size();
-        for (AddExpenseRequest.SplitDetail splitDetail : splits) {
-            User user = iUserDAO.findById(splitDetail.getUserId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-            ExpenseSplit expenseSplit = new ExpenseSplit();
-            expenseSplit.setExpenseId(expense.getId());
-            expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(equalShare);  // equal share
-
-            iExpenseSplitDAO.save(expenseSplit);
-        }
-    }
-
-    private void handlePercentSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
-
-        for (AddExpenseRequest.SplitDetail splitDetail : splits) {
-            User user = iUserDAO.findById(splitDetail.getUserId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-            double percentageShare = (splitDetail.getValue() / 100) * totalAmount;
-
-            ExpenseSplit expenseSplit = new ExpenseSplit();
-            expenseSplit.setExpenseId(expense.getId());
-            expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(percentageShare);  // percentage share
-
-            iExpenseSplitDAO.save(expenseSplit);
-        }
-    }
-
-    private void handleRatioSplits(List<AddExpenseRequest.SplitDetail> splits, Expense expense, double totalAmount) {
-
-        double totalRatio = splits.stream().mapToDouble(AddExpenseRequest.SplitDetail::getValue).sum();
-        for (AddExpenseRequest.SplitDetail splitDetail : splits) {
-            User user = iUserDAO.findById(splitDetail.getUserId())
-                    .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-            double ratioShare = (splitDetail.getValue() / totalRatio) * totalAmount;
-
-            ExpenseSplit expenseSplit = new ExpenseSplit();
-            expenseSplit.setExpenseId(expense.getId());
-            expenseSplit.setUserId(user.getId());
-            expenseSplit.setSplitValue(ratioShare);  // ratio share
-
-            iExpenseSplitDAO.save(expenseSplit);
-        }
-    }
 }

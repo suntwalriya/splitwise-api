@@ -118,7 +118,7 @@ splitwise-api/
 
    or if running the local build:
     ```bash
-    docker run -p 8080:8080 splitwise-api
+    docker run -p 8081:8081 splitwise-api
     ```
 
 ## 📖 API Documentation
